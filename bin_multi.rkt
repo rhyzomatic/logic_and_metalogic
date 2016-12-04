@@ -1,0 +1,58 @@
+#lang racket
+(require "TM.rkt")
+
+(machine '(@@1_1_1_M1_1_1_: 0 start)
+         '(20000 0 1)
+         '((start Any (R R R Px) setup-y)
+           (setup-y !M R setup-y)
+           (setup-y M (R R Py) setup-z)
+           (setup-z !: R setup-z)
+           (setup-z : (R Pw R P0 R Pz) goto-first-bit)
+
+           (goto-first-bit !@ L goto-first-bit)
+           (goto-first-bit @ R multiply-bit)
+
+           (goto-next-multi-bit !x R goto-next-multi-bit)
+           (goto-next-multi-bit x R goto-next-multi-bit-move-x)
+           (goto-next-multi-bit-move-x M N halt)
+           (goto-next-multi-bit-move-x !M (L P_ R R P_x) goto-next-multi-bit-move-w)
+           (goto-next-multi-bit-move-w !w R goto-next-multi-bit-move-w)
+           (goto-next-multi-bit-move-w w (P_ R R Pw R R Pz R) goto-next-multi-bit-reset-z)
+           (goto-next-multi-bit-reset-z !z R goto-next-multi-bit-reset-z)
+           (goto-next-multi-bit-reset-z z P_ goto-next-multi-bit-move-y)
+           (goto-next-multi-bit-move-y !y L goto-next-multi-bit-move-y)
+           (goto-next-multi-bit-move-y y P_ goto-next-multi-bit-move-y2)
+           (goto-next-multi-bit-move-y2 !M L goto-next-multi-bit-move-y2)
+           (goto-next-multi-bit-move-y2 M (R R Py) goto-x)
+           (goto-x !x L goto-x)
+           (goto-x x L multiply-bit)
+
+           (multiply-bit 0 N goto-next-multi-bit)
+           (multiply-bit 1 N add-bit)
+
+           (add-bit !1 N add-bit-goto-z)
+           (add-bit 1 N add-bit-1)
+           (add-bit-goto-z !z R add-bit-goto-z)
+           (add-bit-goto-z z N goto-next-bit)
+
+           (add-bit-1 !z R add-bit-1)
+           (add-bit-1 z L add-bit-1+)
+           (add-bit-1+ !1 (P1 R R) goto-next-bit)
+           (add-bit-1+ 1 (P0 R R) push-next-1)
+
+           (push-next-1 !1 P1 goto-next-bit)
+           (push-next-1 1 (P0 R R) push-next-1)
+
+           (goto-next-bit !z L goto-next-bit)
+           (goto-next-bit z L put-zero-if-blank)
+           (put-zero-if-blank None (P0 R P_ R R Pz) goto-next-bit-move-y)
+           (put-zero-if-blank Any  (R P_ R R Pz) goto-next-bit-move-y)
+           (goto-next-bit-move-y !y L goto-next-bit-move-y)
+           (goto-next-bit-move-y y (P_ R) goto-next-bit-move-y2)
+           ;; tests if we are at the end of the string
+           (goto-next-bit-move-y2 !: (R Py L) add-bit)
+           (goto-next-bit-move-y2 : N reset-y)
+           (reset-y !M L reset-y)
+           (reset-y M (R R Py) reset-to-x)
+           (reset-to-x !x L reset-to-x)
+           (reset-to-x x N goto-next-multi-bit)))
