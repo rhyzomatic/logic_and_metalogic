@@ -1,9 +1,89 @@
 #lang racket
 (require "TM.rkt")
 
-(define (append_symbols a b)
-  (string->symbol (string-join (map symbol->string (list a b)) "")))
 
+(define (append_symbols . symbols)
+  (string->symbol (string-join (map symbol->string symbols) "")))
+
+;; each skeleton should return '(list_of_configs config_to_call)
+
+(define (L next_command)
+  (let* ([configs (car next_command)] [next_config (cadr next_command)] [this_config (append_symbols 'L-> next_config)])
+    (list (cons (list this_config 'Else 'L next_config) configs)
+          this_config)))
+
+(define (gen_skeleton name f)
+  (lambda (next_command)
+    (let* ([configs (car next_command)] [next_config (cadr next_command)] [this_config (append_symbols name '-> next_config)])
+      (f this_config next_config))))
+
+(define R2 (gen_skeleton 'R
+  (lambda (this_config next_config)
+    (list (list (list this_config 'Else 'R (append_symbols this_config '_second_R))
+                (list (append_symbols this_config '_second_R) 'Else 'R next_config))
+          this_config))))
+
+(define (goto_symbol_constr dir)
+  (lambda (symbol next_command)
+    (let* ([configs (car next_command)] [next_config (cadr next_command)] [this_config (append_symbols 'goto_symbol_ dir '_ symbol '-> next_config)])
+      (list (append (list (list this_config symbol 'N next_config)
+                          (list this_config 'Else dir this_config))
+                    configs)
+            this_config))))
+
+;; goes left and stops on symbol
+(define goto_symbol_L (goto_symbol_constr 'L))
+;; goes right and stops on symbol
+(define goto_symbol_R (goto_symbol_constr 'R))
+
+;; goes right to the sentinel, then goes left and stops on first instance of symbol
+(define (find_symbol_L symbol next_command)
+  (let* ([configs (car next_command)] [next_config (cadr next_command)] [this_config (append_symbols 'find_symbol_L_ symbol '-> next_config)])
+    (goto_symbol_R '@
+    (goto_symbol_L symbol (list '() next_config)))))
+
+(define (find_symbol_R symbol next_command)
+  (let* ([configs (car next_command)] [next_config (cadr next_command)] [this_config (append_symbols 'find_symbol_R_ symbol '-> next_config)])
+    (goto_symbol_L '@
+    (goto_symbol_R symbol (list '() next_config)))))
+
+(define num_vars 2)
+(define (var_distance var)
+  (cond [(equal? 'a var) 1]
+        [(equal? 'b var) 2]))
+
+(define (goto_var var next_command)
+  (let* ([configs (car next_command)] [next_config (cadr next_command)] [this_config (append_symbols 'goto_var_ var '-> next_config)] 
+                                      [config (lambda (w) (append_symbols this_config w))])
+    (goto_symbol_R '@
+      (list (list (list (config '_move_left) 'Else (make-list (var_distance var) 'L) next_config))
+            (config '_move_left)))))
+
+(define (get_binary n)
+  (map (lambda (s) (if (equal? '|0| s) '0 '1))
+       (map string->symbol 
+            (filter (lambda (c) (not (equal? "" c)))
+                    (string-split (number->string n 2) "")))))
+
+(define _move_var_L (make-list num_vars 'L))
+
+(define (print_for_var symbols)
+  (cond [(null? symbols) '()]
+        [else (cons (append_symbols 'P (car symbols)) (append _move_var_L (print_for_var (cdr symbols))))]))
+
+(displayln (print_for_var '(0 1 0)))
+
+(define (print_at_head_L symbols next_command)
+  (let* ([configs (car next_command)] [next_config (cadr next_command)] [this_config (append_symbols 'print_at_head_L (append_symbols symbols) '-> next_config)] 
+                                      [config (lambda (w) (append_symbols this_config w))])
+    (list (append (list (list this_config 'Else (print_for_var symbols) next_config)) configs)
+          this_config)))
+
+;;(displayln (goto_symbol_L 'x '(() poop)))
+;;(displayln (find_symbol_L 'x '(() poop)))
+(displayln (goto_var 'b '(() poop)))
+
+#|
 ;; adds int at x to int at y and puts result at z
 ;;(define (add x y z spacing prefix)
 
@@ -45,3 +125,4 @@
            (next_a_copy None 
 
 
+|#
