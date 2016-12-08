@@ -20,7 +20,6 @@
   (cond [(null? mconfigs) '()]
         [(symbol? (instr-final_mconfig (car mconfigs)))
            (cons (car mconfigs) (expand_table (cdr mconfigs)))]
-        [(instr? (car mconfigs)) (expand_table (append (car mconfigs) (cdr mconfigs)))]
         ;; if the final_mconfig of the instr is itself a skeleton table,
         ;; we need to expand it and ensure that its table gets properly appended
         [(sk? (instr-final_mconfig (car mconfigs)))
@@ -126,28 +125,34 @@
           (list (instr this_mconfig 'Else 'N (find (right C) B alpha)))))))
 
 ;; c(C, B, alpha)
+#|
 (define (find_right C B alpha)
   (let* ([this_mconfig (build_mconfig 'find_right< C '~ B '~ alpha '>)]
          [m (mconfig_builder this_mconfig)])
     (sk this_mconfig
         (expand_table
           (list (instr this_mconfig 'Else 'N (find (right C) B alpha)))))))
+|#
 
-;; instr_pattern: '(instr this_mconfig beta 'Else 'N (find B C beta))
+;; instr_pattern: '(instr this_mconfig beta 'N (find B C beta))
 (define (sub_symbol symbols_left instr_pattern)
   (cond [(null? symbols_left) '()]
         [else
-          (letrec 
-            [placeholder (caddr instr_pattern)]
-            [sub (lambda (p sym)
-                   (cond [(equal? placeholder (car p))
-                           (cons symbol (sub (cdr p) sym))]
-                         [(list? (car p))
-                           (cons (sub (car p) sym) (sub (cdr p) sym))]
-                         [else
-                           (cons (car p) (sub (cdr p) sym))]))])
-            (cons (sub instr_pattern (car symbols_left))
-                  (sub_symbol (cdr symbols_left) instr_pattern))]))
+          (letrec ([placeholder (cadr instr_pattern)]
+                   [sub (lambda (p sym)
+                          (cond [(null? p) '()]
+                                [(equal? placeholder (car p))
+                                  (cons sym (sub (cdr p) sym))]
+                                [(list? (car p))
+                                  (cons (sub (car p) sym) (sub (cdr p) sym))]
+                                [else
+                                  (cons (car p) (sub (cdr p) sym))]))])
+                  (cons (sub instr_pattern (car symbols_left))
+                        (sub_symbol (cdr symbols_left) instr_pattern)))]))
 
+
+
+(let ([this_mconfig 'm] [B 'b] [C 'c] [thing (car (sub_symbol '(0 1 'poop) `(,this_mconfig beta 'N (find ,B ,C beta))))])
+  (map eval thing))
 
 
