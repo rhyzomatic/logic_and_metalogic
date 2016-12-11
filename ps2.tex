@@ -1,0 +1,72 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx}
+\usepackage[font=footnotesize, labelfont={sf,bf}, margin=1cm]{caption}
+\usepackage{mathtools}
+\usepackage{wrapfig}
+\usepackage[letterpaper, portrait, margin=1in]{geometry}
+\usepackage{framed}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{float}
+\usepackage[utf8]{inputenc}
+\usepackage{enumerate}
+\usepackage[titletoc,toc,title]{appendix}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\newcommand{\?}{\stackrel{?}{=}}
+%Gummi|065|=)
+\title{\textbf{Problem Set 2}}
+\author{}
+\date{}
+\begin{document}
+
+\maketitle
+
+If the tape is not completely empty, then there must be at least one symbol on the tape and that symbol must be a finite number of squares away from wherever the head begins. This is because the head could never start infinitely far away from that symbol.
+
+We can then write a machine which on each iteration checks one square farther to the right and one farther square to the left. Thus if the symbol is $n$ squares away from the head at the beginning, it will take $n$ iterations of the machine to reach it. Such a machine is written out below:
+
+$$
+   \textbf{begin} \left\{
+     \begin{array}{l c c r}
+       \text{Any} & N & \textbf{Halt}\\
+       \text{None} & Px & \textbf{Halt}\\
+     \end{array}
+   \right.
+ $$
+ $$
+   \textbf{check-then-left} \left\{
+     \begin{array}{l c c r}
+       \text{Any} & N & \textbf{Halt}\\
+       \text{None} & \textit{Px L} & \textbf{left}\\
+     \end{array}
+   \right.
+$$
+$$
+   \textbf{left} \left\{
+     \begin{array}{l c c r}
+       \text{!x} & L & \textbf{left}\\
+       \text{x} & \textit{E L} & \textbf{check-then-right}\\
+     \end{array}
+   \right.
+$$
+  $$
+   \textbf{check-then-right} \left\{
+     \begin{array}{l c c r}
+       \text{Any} & N & \textbf{Halt}\\
+       \text{None} & \textit{Px R} & \textbf{right}\\
+     \end{array}
+   \right.
+ $$
+$$
+   \textbf{right} \left\{
+     \begin{array}{l c c r}
+       \text{!x} & R & \textbf{right}\\
+       \text{x} & \textit{E R} & \textbf{check-then-left}\\
+     \end{array}
+   \right.
+$$
+
+This machine keeps track of how far it has already checked with two \textit{x} symbols. Each time it checks a new square, it then moves that \textit{x} symbol one farther away from the original head position.
+
+\end{document}
