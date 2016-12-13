@@ -4,6 +4,15 @@
 
 (require "TM.rkt")
 
+;;;; borrowed from http://stackoverflow.com/a/15871126/3810418
+(define (index-of lst ele)
+  (let loop ((lst lst)
+             (idx 0))
+    (cond ((empty? lst) (displayln ele) #f)
+          ((equal? (first lst) ele) idx)
+          (else (loop (rest lst) (add1 idx))))))
+;;;; ----------------
+
 (struct sk (mconfig_to_call mtable) #:transparent)
 (struct instr (mconfig read_symbol ops final_mconfig) #:transparent)
 (define (instr->list i)
@@ -453,12 +462,20 @@
 
 (define utm (sort_instr_list (instr_set->list (set-union kom begin anf kmp sim mk sh inst))))
 
+#|
+(machine '(@@^_D_A_D_D_C_C_N_D_A_A_^_D_A_A_D_C_C_D_C_C_L_D_A_$
+            0 begin)
+         '(100000 0 1000)
+         utm)
+|#
+
 ;;(for-each displayln utm)
 
 (define directions (set 'L 'R 'N))
 
 (define (stripP s)
-  (string->symbol (string-trim (symbol->string s) "P" #:right? #f)))
+  (if (eq? s 'P_) 'None 
+      (string->symbol (string-trim (symbol->string s) "P" #:right? #f))))
 
 (define (single_to_double_op op)
   (cond [(set-member? directions op) (list 'None op)]
@@ -467,8 +484,8 @@
 (define (convert_to_double_op i)
   (let ([ops (caddr i)])
        (cond [(null? ops) '()]
-             [(symbol? ops) (list i)]
-             [(= (length ops) 1) (list-set i 2 (single_to_double_op (car ops)))]
+             [(symbol? ops) (list (list-set i 2 (single_to_double_op ops)))]
+             [(= (length ops) 1) (list (list-set i 2 (single_to_double_op (car ops))))]
              [else
                (let ([new_mconfig (gensym)])
                    (cond [(and (not (set-member? directions (car ops))) (set-member? directions (cadr ops)))
@@ -484,7 +501,8 @@
                              (convert_to_double_op (list new_mconfig 'Any (cdr ops) (cadddr i))))]))])))
 
 
-(convert_to_double_op '(wut a (R R R Pg L Pe R) wut2))
+;;(convert_to_double_op '(wut a (R R R Pg L Pe R) wut2))
+;;(convert_to_double_op '(wut a N wut2))
 
 (define (expand_ops instr_list)
   (cond [(null? instr_list) '()]
@@ -493,21 +511,135 @@
                   (expand_ops (cdr instr_list)))]))
 
 
-(expand_ops '((wut a (R R R Pg L Pe R) wut2)
-              (wut2 Any (R Px R Py R R Pz) wut)))
+;;(for-each displayln (expand_ops utm))
 
-#|
+(define (find_mconfig_scanned_symbols mconfig instr_list)
+   (cond [(null? instr_list) (set)]
+         [(and (eq? mconfig (caar instr_list)) (not (eq? (cadar instr_list) 'Any)))
+            (set-add (find_mconfig_scanned_symbols mconfig (cdr instr_list))
+                     (cadar instr_list))]
+         [else (find_mconfig_scanned_symbols mconfig (cdr instr_list))]))
+
+(define test
+  (expand_ops '((wut x (R R R Px L PA R) wut2)
+              (wut D (R L Py) wut2)
+              (wut2 Any (R Pw R Pz R R Py) wut))))
+
+;;(find_mconfig_scanned_symbols 'wut test)
+
+(define (enum_sym_read_print i symbols)
+  (cond [(set-empty? symbols) '()]
+        [else
+          (cons (list-set (list-set i 1 (set-first symbols)) 2 (cons (set-first symbols) (cdaddr i))) 
+                (enum_sym_read_print i (set-rest symbols)))]))
+
+;;(enum_sym_read_print '(wut a (x R) next) (set 'f 'u 'c 'k 'm 'e))
+
+(define (enum_sym_read i symbols)
+  (cond [(set-empty? symbols) '()]
+        [else
+          (cons (list-set i 1 (set-first symbols))
+                (enum_sym_read i (set-rest symbols)))]))
+
+;;(enum_sym_read '(wut a (x R) next) (set 'f 'u 'c 'k 'm 'e))
+
+
+(define all_symbols '(None 0 1 @ : $ ^ D A C L R N v u w x y z))
+(define all_symbols_set (list->set all_symbols))
+
+(define (is_not_scan? symbol)
+  (eq? #\! (string-ref (symbol->string symbol) 0)))
+
+(define (number_symbol->number symbol)
+  (cond [(eq? symbol '\0) 0]
+        [(eq? symbol '\1) 1]
+        [else symbol]))
+
+(define (get_banged_symbol symbol)
+  (number_symbol->number (string->symbol (substring (symbol->string symbol) 1 2))))
+
 (define (fix_print instr_list)
-  (map (lambda (i)
-         (cond [(and (eq? (cadr i) 'Any) (eq? (car (caddr i)) 'None))
-                             
-                |#
-                    
-       
+  (letrec ([fix_instr 
+             (lambda (ins)
+                  (cond [(and (eq? (cadr ins) 'Any) (eq? (caaddr ins) 'None))
+                           (enum_sym_read_print ins 
+                                                (set-subtract all_symbols_set 
+                                                              (find_mconfig_scanned_symbols 
+                                                                (car ins) instr_list)))]
+                        [(eq? (cadr ins) 'Any)
+                           (enum_sym_read 
+                             ins (set-subtract all_symbols_set 
+                                               (find_mconfig_scanned_symbols 
+                                                 (car ins) instr_list)))]
+                        [(is_not_scan? (cadr ins))
+                           (enum_sym_read
+                             ins (set-subtract all_symbols_set
+                                               (set (get_banged_symbol (cadr ins)))))]
+                        [(eq? (caaddr ins) 'None)
+                           (list (list-set ins 2 (cons (cadr ins) (cdaddr ins))))]
+                        [else
+                          (list ins)]))]
+           [fix_all (lambda (i_list)
+                      (if (null? i_list) '()
+                          (append (fix_instr (car i_list))
+                                  (fix_all (cdr i_list)))))])
+    (fix_all instr_list)))
 
-#|
-(machine '(@@^_D_A_D_D_C_C_L_D_A_$
-            0 begin)
-         '(100000 0 1)
-         utm)
-|#
+;;(for-each displayln (fix_print test))
+
+(define (get_new_mconfig mconfig mconfig_map)
+  (if (hash-has-key? mconfig_map mconfig)
+      (list (hash-ref mconfig_map mconfig) mconfig_map)
+      (list (hash-count mconfig_map) 
+            (hash-set mconfig_map mconfig 
+                      (hash-count mconfig_map)))))
+
+(define (normalize_mconfigs instr_list)
+  (letrec ([helper
+             (lambda (mconfig_map i_list)
+               (if (null? i_list) '()
+                   (let* ([m0 (get_new_mconfig (caar i_list) mconfig_map)]
+                          ;; have to use the updated mconfig_map from m0
+                          ;; just in case it's different
+                          [m1 (get_new_mconfig (cadddr (car i_list)) (cadr m0))])
+                     (cons (append (list (car m0)) 
+                                   (flatten (take (cdar i_list) 2)) 
+                                   (list (car m1)))
+                           (helper (cadr m1) (cdr i_list))))))])
+    ;; make sure 'begin mconfig gets the 0, so it is called first by the UTM
+    (helper (hash 'begin 0) instr_list)))
+
+;(for-each displayln (normalize_mconfigs (fix_print (expand_ops utm))))
+
+(define (insert_blanks str)
+  (string-append (string-join (map string (string->list str)) "_") "_"))
+
+(define (mconfig->sd mconfig_n)
+  (insert_blanks (string-append "D" (make-string (+ mconfig_n 1) #\A))))
+
+(define (symbol->sd symbol)
+  (insert_blanks (string-append "D" (make-string (index-of all_symbols (number_symbol->number symbol)) #\C))))
+
+(define (instr->sd i)
+  (string-append "^_" (mconfig->sd (car i)) 
+                      (symbol->sd (cadr i)) 
+                      (symbol->sd (caddr i)) 
+                      (symbol->string (cadddr i)) "_"
+                      (mconfig->sd (last i))))
+
+(define (instr_list->sd instr_list)
+  (string-append "@@" (apply string-append (map instr->sd instr_list)) "$"))
+
+
+;; this line will print out a SD of the UTM that can be fed back to itself.
+;; 1. expand_ops turns instructions with multiple operations into a string
+;;    of several double operation instructions
+;; 2. fix_print then fixes all the "scan Any symbol" and "print nothing"
+;;    cases by replacing them with instructions for every possible scanned
+;;    symbol
+;; 3. normalize_mconfigs converts the named mconfigs to integers
+;; 4. instr_list->sd turns the list of instructions into a SD string
+;;    that can be read by the UTM (i.e. it produces a tape to be fed
+;;    into the UTM
+(instr_list->sd (normalize_mconfigs (fix_print (expand_ops utm))))
+
