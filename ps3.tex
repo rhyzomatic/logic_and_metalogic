@@ -37,14 +37,18 @@ $ScnSq(x, y)$ & Returns true iff the machine will scan square $y$ in complete co
 %\hline 
 $MCon(x, m_i)$ & Returns true iff the m-configuration is $m_i$ in complete configuration $x$.\\ 
 %\hline 
-$S(a, b)$ & The successor function; returns true if $b$ is the successor of $a$, i.e. $b = a + 1$. \\ 
-%\hline 
+$S(a, b)$ & The successor function; returns true if $b$ is the successor of $a$, i.e. $b = a + 1$. \\
+%\hline
+$SymIn(\xi,\upsilon)$ & Returns the index of the symbol at complete configuration $x$ in square $y$. \\
+%\hline
+$ScnIn(\xi)$ & Returns the index of the scanned square in complete configuration $x$. \\
+%\hline
+$MConIn(\xi)$ & Returns the index of the m-configuration in complete configuration $x$. \\
 \end{tabular} 
 }
 \vspace{1cm}
 
-$Inst \ \{ \ m_\iota \ S_\rho \ S_\pi \ L \ m_\phi \ \}$ 
-
+$Inst \ \{ \ m_\iota \ S_\rho \ S_\pi \ L \ m_\phi \ \}$ is an abbreviation for the following formula:
 \begin{align}
 (\forall x)(\forall y)(\forall x')(\forall y') \bigg\{ & \\
 \Big[ S(x, x') \land & S(y', y) \land  \\
@@ -61,17 +65,55 @@ $Des(\mathscr{M})$ is defined as the conjunction of the $Inst$ formulas that cor
 
 $Un(\mathscr{M})$
 
-$$(\forall w)(\forall x)(\forall y)(\forall z)\{S(w,x) \land S(w,y) \land S(x,z) \to S(y,z) \}$$
-s
+In order to define $Un(\mathscr{M})$, we first need to establish the uniqueness of successors. The following formula, which we will refer to as $Q$, does this:
 \begin{align}
-(\forall \Omega) \\
-ScnSq(\Omega, \Omega) \\
-(\forall y)(Tape(\Omega, y, S_0)) \\
-MCon(\Omega, m_1) \\
-Desc(\mathscr{M})
+(\forall x)(\exists w)(\forall y)(\forall z)\bigg\{S(x, w) \land \\
+(S(x, y) \to G(x, y)) \land \\
+(S(x, y) \land G(y, z) \to G(x, z)) \land \\
+\Big[ G(y, x) \lor \big(G(x, z) \land S(z, y)\big) \lor\\
+\big(S(x,z) \land S(y,z)\big) \to \neg S(x, y)) \Big] \bigg\}
 \end{align}
 
+$A(\mathscr{M})$
 
+$$\Big[ Q \land ScnSq(\Omega, \Omega) \land (\forall y)(Tape(\Omega, y, S_0) \land MCon(\Omega, m_1) \land Des(\mathscr{M}) \Big ]$$
+
+$Un(\mathscr{M})$
+$$(\exists \Omega)A(\mathscr{M}) \to (\exists \alpha)(\exists \beta)Tape(\alpha, \beta, S_1)$$
+
+$CC_\xi$ will be the abbreviation for
+
+%Tape(\Omega^{(\xi)},\Omega'',S_{SymIn(\xi,2)}) \land \\
+\begin{align}
+Tape(\Omega^{(\xi)},\Omega,S_{SymIn(\xi,0)}) \land Tape(\Omega^{(\xi)},\Omega',S_{SymIn(\xi,1)}) \land \dots \land Tape(\Omega^{(\xi)},\Omega^{(\xi)},S_{SymIn(\xi,\xi)}) \land \\
+MCon(\Omega^{(\xi)},m_{MConIn(\xi)}) \land \\
+ScnSq(\Omega^{(\xi)},\Omega^{(ScnIn(\xi))}) \land \\
+(\forall y)[S(y,\Omega') \lor S(\Omega,y) \lor S(\Omega',y) \lor \dots \lor S(\Omega^{(\xi-1)},y) \lor Tape(\Omega^{(\xi)},y,S_0)]
+\end{align}
+
+$S^{(\xi)}$ will be the abbreviation for
+
+$$S(\Omega,\Omega') \land S(\Omega',\Omega'') \land \dots \land S(\Omega^{(\xi-1)},\Omega^{(\xi)})$$
+
+$CF_\xi$ is the abbreviation for
+
+$$A(\mathscr{M}) \land S^{(\xi)} \to CC_\xi$$
+
+We will now show Lemma 1.
+
+Lemma 1: If a zero ($S_1$) is printed on the tape, then the formula $Un(\mathscr{M})$ is provable.
+
+We will first show that $CF_\xi$ is provable for all $\xi$ by mathematical induction.
+
+First, the base case, $CF_0$:
+
+$$A(\mathscr{M}) \land S^{(0)} \to CC_0$$
+
+Since $SymIn(0, n)$ will be 0 for all $n$ at the beginning because we start with a blank tape (as specified in $A(\mathscr{M})$ by the $Tape$ term), then the conjunction of $Tape$ functions in (11) is implied by $A(\mathscr{M})$. Line (12) will reduce to $MCon(\Omega, m_0)$ because $MConIn(0)$ will return 1 as the machine always starts on the first m-configuration, $m_0$. The formula $MCon(\Omega, m_0)$ is contained directly in $A(\mathscr{M})$, and so (12) is also implied. Line (13) reduces to $ScnSq(\Omega, \Omega)$ because $ScnIn(0)$ returns 0 as we start on the 0th square. Since $ScnSq(\Omega, \Omega)$ is also part of $A(\mathscr{M})$ it is also implied by the antecedent. Line (14) will reduce to $(\forall y)[Tape(\Omega,y,S_0)]$, since there are no successor terms when $\xi=0$. This is also implied by the antecedent, since this $A(\mathscr{M})$ also includes the statement of the blank tape.
+
+Therefore, $CF_0$ is provable. We will now show the inductive case, $CC_\xi \to CC_{\xi + 1}$:
+
+$$(A(\mathscr{M}) \land S^{(\xi)} \to CC_\xi) \to (A(\mathscr{M}) \land S^{(\xi + 1)} \to CC_{\xi + 1})$$
 
 
 
