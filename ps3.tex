@@ -1,0 +1,78 @@
+\documentclass[11pt]{article}
+\usepackage{yfonts}
+\usepackage{mathrsfs}
+\usepackage[font=footnotesize, labelfont={sf,bf}, margin=1cm]{caption}
+\usepackage{mathtools}
+\usepackage{wrapfig}
+\usepackage[letterpaper, portrait, margin=1in]{geometry}
+\usepackage{framed}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{float}
+\usepackage[utf8]{inputenc}
+\usepackage{enumerate}
+\usepackage[titletoc,toc,title]{appendix}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\newcommand{\?}{\stackrel{?}{=}}
+%Gummi|065|=)
+\title{\textbf{Problem Set 3, Gobbet \#3}}
+\author{}
+\date{}
+\begin{document}
+
+\maketitle
+
+In his proof of Lemma 1, Turing aims to show that for some machine $\mathscr{M}$, if $\mathscr{M}$ will ever print the symbol $S_1$ (which corresponds to a 0) then $Un(\mathscr{M})$ is a provable formula in the Hilbert restricted functional calculus. To define $Un(\mathscr{M})$, Turing first defines several boolean functions which allow us to access all the information of a running machine.
+
+In an effort to improve clarity, we have redefined these functions below:
+
+\vspace{1cm}
+{\renewcommand{\arraystretch}{2}
+\begin{tabular}{p{3cm} p{8cm}}
+%\hline 
+$Tape(x, y, S_i)$ & Returns true iff the tape has symbol $S_i$ on square $y$ in complete configuration $x$. \\ 
+%\hline 
+$ScnSq(x, y)$ & Returns true iff the machine will scan square $y$ in complete configuration $x$. \\ 
+%\hline 
+$MCon(x, m_i)$ & Returns true iff the m-configuration is $m_i$ in complete configuration $x$.\\ 
+%\hline 
+$S(a, b)$ & The successor function; returns true if $b$ is the successor of $a$, i.e. $b = a + 1$. \\ 
+%\hline 
+\end{tabular} 
+}
+\vspace{1cm}
+
+$Inst \ \{ \ m_\iota \ S_\rho \ S_\pi \ L \ m_\phi \ \}$ 
+
+\begin{align}
+(\forall x)(\forall y)(\forall x')(\forall y') \bigg\{ & \\
+\Big[ S(x, x') \land & S(y', y) \land  \\
+& MCon(x, m_\iota) \land ScnSq(x, y) \land Tape(x, y, S_\rho) \Big] \to \\
+\Big[ &Tape(x', y, S_\pi) \land ScnSq(x', y') \land MCon(x', m_\phi) \\
+&(\forall z)(\forall w) \big[ S(y',z) \lor (Tape(x,z,S_w) \to Tape(x',z,S_w) ) \big] \Big] \bigg\}
+\end{align}
+
+For $Inst \ \{ \ m_\iota \ S_\rho \ S_\pi \ R \ m_\phi \ \}$, when the instruction goes right instead of left, we would simply replace the  $S(y', y)$ on line (2) with $S(y, y')$ and $S(y',z)$ on line (5) with $S(z, y')$. 
+
+For $Inst \ \{ \ m_\iota \ S_\rho \ S_\pi \ N \ m_\phi \ \}$, when the instruction does not move, $ScnSq(x',y')$ on line 4 would be replaced by $Scn(x',y)$.
+
+$Des(\mathscr{M})$ is defined as the conjunction of the $Inst$ formulas that correspond to each of $\mathscr{M}$'s instructions after it has been converted to its standard description. 
+
+$Un(\mathscr{M})$
+
+$$(\forall w)(\forall x)(\forall y)(\forall z)\{S(w,x) \land S(w,y) \land S(x,z) \to S(y,z) \}$$
+s
+\begin{align}
+(\forall \Omega) \\
+ScnSq(\Omega, \Omega) \\
+(\forall y)(Tape(\Omega, y, S_0)) \\
+MCon(\Omega, m_1) \\
+Desc(\mathscr{M})
+\end{align}
+
+
+
+
+
+\end{document}
